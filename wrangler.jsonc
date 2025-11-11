@@ -1,0 +1,32 @@
+{
+  // Worker configuration for metadata-service
+  "name": "arke-metadata-service",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+
+  // Environment variables
+  "vars": {
+    "DEEPINFRA_BASE_URL": "https://api.deepinfra.com/v1/openai",
+    "MODEL_NAME": "mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+  },
+
+  // Note: Set DEEPINFRA_API_KEY as a secret using:
+  // wrangler secret put DEEPINFRA_API_KEY
+
+  // Build configuration
+  "build": {
+    "command": "npm run build"
+  },
+
+  "routes": [
+    {
+      "pattern": "metadata.arke.institute",
+      "custom_domain": true
+    }
+  ],
+
+  // Observability
+  "observability": {
+    "enabled": true
+  }
+}
