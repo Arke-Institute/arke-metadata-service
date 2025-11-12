@@ -8,9 +8,10 @@
   "vars": {
     "DEEPINFRA_BASE_URL": "https://api.deepinfra.com/v1/openai",
     "MODEL_NAME": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
-    // Target token budget for file content (Mistral-Small has 128k context window)
-    // We use 100k for content, leaving room for system prompt, schema, and output
-    "TARGET_CONTENT_TOKENS": "100000"
+    // Token budget configuration
+    // Mistral-Small-3.2-24B has 128k context window
+    "MODEL_MAX_TOKENS": "128000",
+    "CONTENT_TOKEN_PROPORTION": "0.5"
   },
 
   // Note: Set DEEPINFRA_API_KEY as a secret using:

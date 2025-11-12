@@ -6,7 +6,8 @@ export interface Env {
   DEEPINFRA_API_KEY: string;
   DEEPINFRA_BASE_URL: string;
   MODEL_NAME: string;
-  TARGET_CONTENT_TOKENS: string;  // Target token budget for file content
+  MODEL_MAX_TOKENS: string;         // Model's maximum context window (e.g., "128000")
+  CONTENT_TOKEN_PROPORTION: string; // Proportion of context for content (e.g., "0.5" for 50%)
 }
 
 // PINAX Metadata Schema (Dublin Core based)

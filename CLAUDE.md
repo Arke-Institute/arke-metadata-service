@@ -100,7 +100,8 @@ Request → extractMetadata() → extractMetadataWithLLM() → LLM API
 **Configured in wrangler.jsonc:**
 - `DEEPINFRA_BASE_URL` - DeepInfra API endpoint (https://api.deepinfra.com/v1/openai)
 - `MODEL_NAME` - LLM model identifier (mistralai/Mistral-Small-3.2-24B-Instruct-2506)
-- `TARGET_CONTENT_TOKENS` - Target token budget for file content (default: 100,000)
+- `MODEL_MAX_TOKENS` - Model's maximum context window (default: 128,000)
+- `CONTENT_TOKEN_PROPORTION` - Proportion of context for file content (default: 0.5 = 50%)
 
 **Set as secrets via wrangler CLI:**
 - `DEEPINFRA_API_KEY` - DeepInfra API key (never commit to repo)
@@ -130,8 +131,11 @@ This service uses a **progressive tax truncation algorithm** to manage token lim
 
 **Model Context:**
 - Mistral-Small-3.2-24B has a **128,000 token context window**
-- Default budget: **100,000 tokens** for file content (configurable via `TARGET_CONTENT_TOKENS` in wrangler.jsonc)
-- Remaining ~28k tokens reserved for system prompt (~500), schema (~1k), output (~1k), and safety margin
+- Configurable via `MODEL_MAX_TOKENS` in wrangler.jsonc (default: 128000)
+- Content budget calculated as: `MODEL_MAX_TOKENS × CONTENT_TOKEN_PROPORTION`
+- Default proportion: **0.5 (50%)** = ~100,000 tokens for file content
+- Remaining ~22% reserved for system prompt (~500), schema (~1k), output (~1k), and safety margin
+- Easy adjustment: Change proportion (e.g., 0.5 = 50%, 0.9 = 90%) without recalculating token counts
 
 **Algorithm Overview:**
 - Protects small files from truncation (below average tax threshold)

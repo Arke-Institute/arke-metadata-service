@@ -12,10 +12,12 @@ const METADATA_MODEL = 'mistralai/Mistral-Small-3.2-24B-Instruct-2506';
 const INPUT_COST_PER_MILLION = 0.075;   // Estimate - adjust based on actual pricing
 const OUTPUT_COST_PER_MILLION = 0.2;  // Estimate - adjust based on actual pricing
 
-// Default token budget (can be overridden by env variable)
+// Default token budget configuration
 // Mistral-Small-3.2-24B has 128k context window
-// We leave room for system prompt (~500 tokens) and output (~1k tokens)
-const DEFAULT_TARGET_CONTENT_TOKENS = 100000;
+const DEFAULT_MODEL_MAX_TOKENS = 128000;
+// Default: use 78% of context for content (~100k tokens)
+// Remaining 22% for system prompt, schema, output, and safety margin
+const DEFAULT_CONTENT_TOKEN_PROPORTION = 0.5;
 
 // DCMI Type vocabulary
 const DCMI_TYPES = [
@@ -137,10 +139,16 @@ function buildContentSection(
     return content;
   }
 
-  // Get target token budget from env or use default
-  const targetTokens = env.TARGET_CONTENT_TOKENS
-    ? parseInt(env.TARGET_CONTENT_TOKENS, 10)
-    : DEFAULT_TARGET_CONTENT_TOKENS;
+  // Calculate target token budget from model max tokens and proportion
+  const modelMaxTokens = env.MODEL_MAX_TOKENS
+    ? parseInt(env.MODEL_MAX_TOKENS, 10)
+    : DEFAULT_MODEL_MAX_TOKENS;
+
+  const contentProportion = env.CONTENT_TOKEN_PROPORTION
+    ? parseFloat(env.CONTENT_TOKEN_PROPORTION)
+    : DEFAULT_CONTENT_TOKEN_PROPORTION;
+
+  const targetTokens = Math.floor(modelMaxTokens * contentProportion);
 
   // Apply progressive tax truncation to fit within token budget
   const truncationItems: TruncationItem[] = files.map(file => ({
