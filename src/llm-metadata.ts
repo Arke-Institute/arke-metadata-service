@@ -3,6 +3,7 @@
  */
 
 import type { Env, PinaxMetadata, OpenAIUsage } from './types';
+import { applyProgressiveTruncation, estimateTokens, truncateContent, type TruncationItem } from './progressive-truncation';
 
 // Mistral-Small model for metadata extraction
 const METADATA_MODEL = 'mistralai/Mistral-Small-3.2-24B-Instruct-2506';
@@ -10,6 +11,11 @@ const METADATA_MODEL = 'mistralai/Mistral-Small-3.2-24B-Instruct-2506';
 // Pricing (assuming similar to other Mistral models, adjust if needed)
 const INPUT_COST_PER_MILLION = 0.075;   // Estimate - adjust based on actual pricing
 const OUTPUT_COST_PER_MILLION = 0.2;  // Estimate - adjust based on actual pricing
+
+// Default token budget (can be overridden by env variable)
+// Mistral-Small-3.2-24B has 128k context window
+// We leave room for system prompt (~500 tokens) and output (~1k tokens)
+const DEFAULT_TARGET_CONTENT_TOKENS = 100000;
 
 // DCMI Type vocabulary
 const DCMI_TYPES = [
@@ -101,9 +107,10 @@ Always respond with valid JSON matching the PINAX schema exactly.`;
  */
 function buildUserPrompt(
   directoryName: string,
-  files: Array<{ name: string; content: string }>
+  files: Array<{ name: string; content: string }>,
+  env: Env
 ): string {
-  const contentSection = buildContentSection(directoryName, files);
+  const contentSection = buildContentSection(directoryName, files, env);
   const schemaSection = buildSchemaSection();
 
   return `${contentSection}
@@ -114,29 +121,51 @@ Extract accurate metadata from the content above. Respond with ONLY valid JSON m
 }
 
 /**
- * Build the content section of the prompt
+ * Build the content section of the prompt with progressive truncation
  */
 function buildContentSection(
   directoryName: string,
-  files: Array<{ name: string; content: string }>
+  files: Array<{ name: string; content: string }>,
+  env: Env
 ): string {
   let content = `Extract metadata for this archival item:
 
 **Directory Name:** ${directoryName}`;
 
-  if (files.length > 0) {
-    content += `\n\n**Content Files:**\n`;
-    files.forEach((file, i) => {
-      // Truncate long content but preserve meaningful portions
-      const maxLength = 800;
-      const truncated = file.content.length > maxLength
-        ? file.content.slice(0, maxLength) + '\n... [truncated]'
-        : file.content;
-
-      content += `\n--- File: ${file.name} ---\n${truncated}\n`;
-    });
-  } else {
+  if (files.length === 0) {
     content += `\n\n(No additional content provided - extract metadata from directory name and context)\n`;
+    return content;
+  }
+
+  // Get target token budget from env or use default
+  const targetTokens = env.TARGET_CONTENT_TOKENS
+    ? parseInt(env.TARGET_CONTENT_TOKENS, 10)
+    : DEFAULT_TARGET_CONTENT_TOKENS;
+
+  // Apply progressive tax truncation to fit within token budget
+  const truncationItems: TruncationItem[] = files.map(file => ({
+    name: file.name,
+    content: file.content,
+    tokens: estimateTokens(file.content)
+  }));
+
+  const { results, stats } = applyProgressiveTruncation(truncationItems, targetTokens);
+
+  // Build content section with truncated files
+  content += `\n\n**Content Files:**\n`;
+
+  for (const result of results) {
+    const displayContent = result.truncated
+      ? truncateContent(result.content, result.allocatedChars)
+      : result.content;
+
+    content += `\n--- File: ${result.name} ---\n${displayContent}\n`;
+  }
+
+  // Add truncation stats as a comment (helpful for debugging)
+  if (stats.mode !== 'no-truncation') {
+    content += `\n(Token budget: ${stats.totalTokensBefore} → ${stats.totalTokensAfter} tokens, `;
+    content += `${stats.itemsProtected} protected, ${stats.itemsTruncated} truncated, mode: ${stats.mode})`;
   }
 
   return content;
@@ -174,7 +203,7 @@ export async function extractMetadataWithLLM(
   env: Env
 ): Promise<MetadataExtractionResult> {
   const systemPrompt = buildSystemPrompt();
-  const userPrompt = buildUserPrompt(directoryName, files);
+  const userPrompt = buildUserPrompt(directoryName, files, env);
 
   const requestBody: OpenAIRequestWithJSON = {
     model: METADATA_MODEL,

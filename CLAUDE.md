@@ -76,8 +76,14 @@ Request → extractMetadata() → extractMetadataWithLLM() → LLM API
 **src/llm-metadata.ts**
 - Builds system/user prompts with PINAX schema instructions
 - Calls DeepInfra API with JSON mode for structured outputs
-- Truncates file content to 800 chars per file to manage token usage
+- Uses progressive tax truncation algorithm to manage token budget (10,000 tokens for content)
 - Calculates API costs based on token usage
+
+**src/progressive-truncation.ts**
+- Implements progressive tax truncation algorithm for fair content distribution
+- Protects small files while proportionally truncating large files
+- Guarantees exact token budget compliance
+- See PROGRESSIVE-TAX-ALGORITHM.md for detailed algorithm explanation
 
 **src/metadata-extractor.ts**
 - `postProcessMetadata()` - Normalizes dates, types, generates ULIDs
@@ -94,6 +100,7 @@ Request → extractMetadata() → extractMetadataWithLLM() → LLM API
 **Configured in wrangler.jsonc:**
 - `DEEPINFRA_BASE_URL` - DeepInfra API endpoint (https://api.deepinfra.com/v1/openai)
 - `MODEL_NAME` - LLM model identifier (mistralai/Mistral-Small-3.2-24B-Instruct-2506)
+- `TARGET_CONTENT_TOKENS` - Target token budget for file content (default: 100,000)
 
 **Set as secrets via wrangler CLI:**
 - `DEEPINFRA_API_KEY` - DeepInfra API key (never commit to repo)
@@ -118,11 +125,45 @@ Dates must be either:
 - Auto-generated in `postProcessMetadata()` if not provided
 - Can also accept UUID format for compatibility
 
-### Token Budget Strategy (from pinax-schema.md)
-The upstream ingest pipeline uses token budgeting:
+### Token Budget Strategy - Progressive Tax Truncation
+This service uses a **progressive tax truncation algorithm** to manage token limits:
+
+**Model Context:**
+- Mistral-Small-3.2-24B has a **128,000 token context window**
+- Default budget: **100,000 tokens** for file content (configurable via `TARGET_CONTENT_TOKENS` in wrangler.jsonc)
+- Remaining ~28k tokens reserved for system prompt (~500), schema (~1k), output (~1k), and safety margin
+
+**Algorithm Overview:**
+- Protects small files from truncation (below average tax threshold)
+- Proportionally truncates large files based on their size contribution
+- Falls back to proportional taxation when protection is infeasible
+
+**How it Works:**
+1. Calculate total tokens and deficit (total - target)
+2. Calculate average tax per file (deficit ÷ file count)
+3. Split files into below-average (protected) and above-average (taxed)
+4. Check if protection is feasible (protected files ≤ target)
+5. If feasible: tax only large files proportionally, protect small files
+6. If not feasible: tax all files proportionally (fallback mode)
+
+**Benefits:**
+- Small files keep full content for better context
+- Large files share truncation burden fairly
+- Guaranteed to reach exact token budget
+- No edge cases - works for any file distribution
+
+**Example:** One giant file (300k tokens) and 3 small files (1k each), target 100k tokens
+- Result: Small files protected (keep 1k each), giant file truncated to 88k tokens
+- Total: exactly 100k tokens
+
+See `PROGRESSIVE-TAX-ALGORITHM.md` for detailed explanation and examples.
+See `src/progressive-truncation.ts` for implementation and `src/progressive-truncation.test.ts` for test cases.
+
+**Upstream Pipeline Note:**
+The upstream ingest pipeline also uses token budgeting to decide whether to include OCR:
 - If text files + child metadata < 10,000 tokens → include OCR from .ref.json files
 - If ≥ 10,000 tokens → exclude OCR to save costs
-- This service receives the pre-filtered input and doesn't need to implement budgeting itself
+- This service then applies progressive truncation to the provided files
 
 ### Testing Notes
 - Tests should use Vitest (`npm run test`)

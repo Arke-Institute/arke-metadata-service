@@ -43,3 +43,11 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Test files
+test-*.ts
+test-*.sh
+*-test.sh
+test_text_sample.txt
+request-payload*.json
+test-request*.json

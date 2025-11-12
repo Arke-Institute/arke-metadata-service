@@ -6,6 +6,7 @@ export interface Env {
   DEEPINFRA_API_KEY: string;
   DEEPINFRA_BASE_URL: string;
   MODEL_NAME: string;
+  TARGET_CONTENT_TOKENS: string;  // Target token budget for file content
 }
 
 // PINAX Metadata Schema (Dublin Core based)
