@@ -38,6 +38,7 @@ export interface ExtractMetadataRequest {
   files: TextFile[];                         // Array of text files with raw content
   access_url?: string;                       // Optional, can be generated
   manual_metadata?: Partial<PinaxMetadata>;  // User overrides
+  custom_prompt?: string;                    // Optional custom instructions for this specific request
 }
 
 export interface ExtractMetadataResponse {

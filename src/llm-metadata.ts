@@ -85,8 +85,8 @@ function calculateCost(usage: OpenAIUsage): number {
 /**
  * Build the system prompt for metadata extraction
  */
-function buildSystemPrompt(): string {
-  return `You are an expert metadata cataloger for archival materials and historical collections.
+function buildSystemPrompt(customPrompt?: string): string {
+  let prompt = `You are an expert metadata cataloger for archival materials and historical collections.
 You extract structured metadata following the PINAX schema, which is based on Dublin Core standards.
 
 Your task is to analyze archival content (directory names, OCR text, descriptions) and extract accurate, structured metadata.
@@ -102,6 +102,12 @@ Key guidelines:
 - Keep language codes in BCP-47 format (e.g., "en", "en-US", "fr")
 
 Always respond with valid JSON matching the PINAX schema exactly.`;
+
+  if (customPrompt) {
+    prompt += `\n\nADDITIONAL INSTRUCTIONS:\n${customPrompt}`;
+  }
+
+  return prompt;
 }
 
 /**
@@ -208,9 +214,10 @@ function buildSchemaSection(): string {
 export async function extractMetadataWithLLM(
   directoryName: string,
   files: Array<{ name: string; content: string }>,
-  env: Env
+  env: Env,
+  customPrompt?: string
 ): Promise<MetadataExtractionResult> {
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildSystemPrompt(customPrompt);
   const userPrompt = buildUserPrompt(directoryName, files, env);
 
   const requestBody: OpenAIRequestWithJSON = {

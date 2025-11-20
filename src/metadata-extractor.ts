@@ -24,7 +24,8 @@ export async function extractMetadata(
   const llmResult = await extractMetadataWithLLM(
     request.directory_name,
     request.files,
-    env
+    env,
+    request.custom_prompt
   );
 
   // 2. Build final metadata by merging LLM output with manual overrides
