@@ -241,7 +241,7 @@ export async function extractMetadataWithLLM(
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ],
-    max_tokens: 1024,
+    max_tokens: 4096,
     temperature: 0.2,  // Lower temperature for more consistent extraction
     response_format: { type: 'json_object' }
   };
