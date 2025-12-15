@@ -6,22 +6,59 @@
 
   // Environment variables
   "vars": {
+    // LLM Configuration
     "DEEPINFRA_BASE_URL": "https://api.deepinfra.com/v1/openai",
     "MODEL_NAME": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
     // Token budget configuration
     // Mistral-Small-3.2-24B has 128k context window
     "MODEL_MAX_TOKENS": "128000",
-    "CONTENT_TOKEN_PROPORTION": "0.5"
+    "CONTENT_TOKEN_PROPORTION": "0.5",
+
+    // DO Configuration
+    "MAX_RETRIES_PER_PI": "3",
+    "MAX_CALLBACK_RETRIES": "3",
+    "ALARM_INTERVAL_MS": "100"
   },
 
   // Note: Set DEEPINFRA_API_KEY as a secret using:
   // wrangler secret put DEEPINFRA_API_KEY
+
+  // Service bindings
+  "services": [
+    {
+      "binding": "IPFS_WRAPPER",
+      "service": "arke-ipfs-api"
+    },
+    {
+      "binding": "ORCHESTRATOR",
+      "service": "arke-orchestrator"
+    }
+  ],
+
+  // Durable Objects
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PINAX_BATCH_DO",
+        "class_name": "PinaxBatchDO"
+      }
+    ]
+  },
+
+  // DO migrations
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["PinaxBatchDO"]
+    }
+  ],
 
   // Build configuration
   "build": {
     "command": "npm run build"
   },
 
+  // Routes
   "routes": [
     {
       "pattern": "metadata.arke.institute",
