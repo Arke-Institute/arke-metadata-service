@@ -5,12 +5,12 @@
  */
 
 export interface Entity {
-  pi: string;
+  id: string;
   tip: string;
   ver: number;
   components: Record<string, string>;  // label -> CID
-  children_pi?: string[];
-  parent_pi?: string;
+  children_id?: string[];
+  parent_id?: string;
   label?: string;
 }
 

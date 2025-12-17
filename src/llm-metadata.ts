@@ -4,6 +4,7 @@
 
 import type { Env, PinaxMetadata, OpenAIUsage } from './types';
 import { applyProgressiveTruncation, estimateTokens, truncateContent, type TruncationItem } from './progressive-truncation';
+import { withRetry } from './lib/retry';
 
 // Mistral-Small model for metadata extraction
 const METADATA_MODEL = 'mistralai/Mistral-Small-3.2-24B-Instruct-2506';
@@ -246,21 +247,27 @@ export async function extractMetadataWithLLM(
     response_format: { type: 'json_object' }
   };
 
-  const response = await fetch(`${env.DEEPINFRA_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${env.DEEPINFRA_API_KEY}`,
-      'Content-Type': 'application/json'
+  // Call LLM with retry for transient errors
+  const data = await withRetry<OpenAIResponse>(
+    async () => {
+      const response = await fetch(`${env.DEEPINFRA_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.DEEPINFRA_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Metadata LLM API error (${response.status}): ${errorText}`);
+      }
+
+      return response.json();
     },
-    body: JSON.stringify(requestBody)
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Metadata LLM API error (${response.status}): ${errorText}`);
-  }
-
-  const data: OpenAIResponse = await response.json();
+    { maxRetries: 3, baseDelayMs: 1000, maxDelayMs: 30000 }
+  );
 
   if (!data.choices || data.choices.length === 0) {
     throw new Error('Metadata LLM API returned no choices');

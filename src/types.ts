@@ -86,15 +86,11 @@ export interface OpenAIUsage {
 export interface ProcessRequest {
   batch_id: string;
   chunk_id: string;
-  r2_prefix: string;
+  r2_prefix?: string;      // Deprecated - service fetches context from IPFS
   custom_prompt?: string;
-  institution?: string;  // Force institution in output
+  institution?: string;    // Force institution in output
 
-  pis: Array<{
-    pi: string;
-    // NOTE: No current_tip - services must fetch fresh tips from IPFS
-    // to avoid stale tip bugs from bidirectional parent-child updates
-  }>;
+  pis: string[];           // Just PI strings - service fetches context from IPFS
 }
 
 export interface CallbackPayload {

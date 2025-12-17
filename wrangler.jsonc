@@ -35,7 +35,7 @@
     }
   ],
 
-  // Durable Objects
+  // Durable Objects - SQLite-backed for robust large content storage (10GB vs 128KB limit)
   "durable_objects": {
     "bindings": [
       {
@@ -45,11 +45,15 @@
     ]
   },
 
-  // DO migrations
+  // DO migrations - v2 deleted old KV DO, v3 creates new SQLite DO
   "migrations": [
     {
-      "tag": "v1",
-      "new_classes": ["PinaxBatchDO"]
+      "tag": "v2",
+      "deleted_classes": ["PinaxBatchDO"]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["PinaxBatchDO"]
     }
   ],
 

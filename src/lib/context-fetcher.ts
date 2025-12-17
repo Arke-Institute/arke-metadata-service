@@ -98,8 +98,8 @@ export async function fetchPinaxContext(
   await Promise.all(refPromises);
 
   // 4. Fetch child pinax.json files (children must be processed first due to bottom-up order)
-  if (entity.children_pi && entity.children_pi.length > 0) {
-    const childPromises = entity.children_pi.map(async (childPi, index) => {
+  if (entity.children_id && entity.children_id.length > 0) {
+    const childPromises = entity.children_id.map(async (childPi, index) => {
       try {
         const childEntity = await ipfsClient.getEntity(childPi);
         if (childEntity.components['pinax.json']) {
@@ -130,7 +130,7 @@ export async function fetchPinaxContext(
     `[ContextFetcher] Fetched context for ${pi}: ${truncatedFiles.length} files ` +
       `(pinax: ${entity.components['pinax.json'] ? 'yes' : 'no'}, ` +
       `refs: ${Object.keys(entity.components).filter((k) => k.endsWith('.ref.json')).length}, ` +
-      `children: ${entity.children_pi?.length || 0})`
+      `children: ${entity.children_id?.length || 0})`
   );
 
   return {

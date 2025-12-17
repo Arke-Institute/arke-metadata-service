@@ -20,7 +20,7 @@ import type {
 import { extractMetadata } from './metadata-extractor';
 import { validatePinaxMetadata } from './metadata-validator';
 
-// Re-export the Durable Object class
+// Re-export the Durable Object class (SQLite-backed for 10GB storage vs 128KB KV limit)
 export { PinaxBatchDO } from './durable-objects/PinaxBatchDO';
 
 export default {
